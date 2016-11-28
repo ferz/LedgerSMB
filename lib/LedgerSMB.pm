@@ -676,6 +676,20 @@ sub take_top_level {
    return $return_hash;
 }
 
+
+=item fix_translation ($obj, $tag)
+
+=cut
+    
+sub fix_translation {
+    my ($self, $obj, $tag) = @_;
+    if (('HASH' eq ref $obj) && (exists $obj->{$tag}) && (exists $self->{_locale}) && $self->{_locale}->can('text')) {
+	$obj->{$tag}=$self->{_locale}->text($obj->{$tag});
+    }
+    return $obj;
+}
+
+
 1;
 
 
