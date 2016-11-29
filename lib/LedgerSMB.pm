@@ -144,6 +144,7 @@ package LedgerSMB;
 
 use strict;
 use warnings;
+use Carp;
 
 use CGI::Simple;
 $CGI::Simple::DISABLE_UPLOADS = 0;
@@ -371,13 +372,13 @@ sub _set_script_name {
     my ($self) = @_;
 
     if (exists $ENV{SCRIPT_NAME} && defined $ENV{SCRIPT_NAME} && $ENV{SCRIPT_NAME} =~ m/([^\/\\]*.pl)\?*.*$/x) {
-	$self->{script} = $1 if defined $1;
-	if ( ( $self->{script} =~ m#(\.\.|\\|/)#x ) ) {
-	    $self->error("Access Denied");
-	}
+        $self->{script} = $1 if defined $1;
+        if ( ( $self->{script} =~ m#(\.\.|\\|/)#x ) ) {
+            $self->error("Access Denied");
+        }
     } else {
-	$ENV{SCRIPT_NAME} = "";
-	$self->{script} = 'login.pl';
+        $ENV{SCRIPT_NAME} = "";
+        $self->{script} = 'login.pl';
     }
 
     $logger->debug("\$self->{script} = $self->{script} "
@@ -492,7 +493,7 @@ sub is_allowed_role {
 
 sub finalize_request {
     LedgerSMB::App_State->cleanup();
-    die 'exit'; # return to error handling and cleanup
+    croak 'exit'; # return to error handling and cleanup
                 # Without dying, we tend to continue with a bad dbh. --CT
 }
 
@@ -522,7 +523,7 @@ Content-Type: text/html; charset=utf-8
 </html>
 |;
     }
-    die;
+    croak;
 }
 
 # Database routines used throughout
@@ -571,13 +572,13 @@ sub dberror{
    $logger->error("Logging SQL State ".$dbh->state.", error ".
            $dbh->err . ", string " .$dbh->errstr);
    if (defined $state_error->{$dbh->state}){
-       die $state_error->{$dbh->state}
+       croak $state_error->{$dbh->state}
            . "\n" .
           $locale->text('More information has been reported in the error logs');
        $dbh->rollback;
-       die;
+       croak;
    }
-   die $dbh->state . ":" . $dbh->errstr;
+   croak $dbh->state . ":" . $dbh->errstr;
 }
 
 sub merge {
@@ -678,16 +679,14 @@ sub take_top_level {
 =item fix_translation ($obj, $tag)
 
 =cut
-    
+
 sub fix_translation {
     my ($self, $obj, $tag) = @_;
     if (('HASH' eq ref $obj) && (exists $obj->{$tag}) && (exists $self->{_locale}) && $self->{_locale}->can('text')) {
-	$obj->{$tag}=$self->{_locale}->text($obj->{$tag});
+        $obj->{$tag}=$self->{_locale}->text($obj->{$tag});
     }
     return $obj;
 }
 
 
 1;
-
-
