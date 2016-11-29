@@ -244,9 +244,9 @@ sub _main_screen {
                                                  $credit_act->{id});
 
     # Globals for the template
-    my @salutations = map { 
+    my @salutations = map {
             $request->fix_translation($_, 'salutation');
-                             }
+                          }
             LedgerSMB->call_procedure(
                 funcname => 'person__list_salutations'
     );
@@ -323,14 +323,14 @@ sub _main_screen {
         format => 'HTML'
     );
 
-    my @country_list = map { 
+    my @country_list = map {
             $request->fix_translation($_, 'name');
-                             }
+                           }
                 LedgerSMB->call_procedure(
                      funcname => 'location_list_country'
       );
 
-    my @entity_classes = map { 
+    my @entity_classes = map {
             $request->fix_translation($_, 'class');
                              }
                          LedgerSMB->call_procedure(
