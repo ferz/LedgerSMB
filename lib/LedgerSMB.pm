@@ -144,8 +144,6 @@ package LedgerSMB;
 
 use strict;
 use warnings;
-use Carp;
-
 use CGI::Simple;
 $CGI::Simple::DISABLE_UPLOADS = 0;
 
@@ -178,16 +176,12 @@ our $VERSION = '1.6.0-dev';
 my $logger = Log::Log4perl->get_logger('LedgerSMB');
 
 sub new {
-    #my $type   = "" unless defined shift @_;
-    #my $argstr = "" unless defined shift @_;
-    (my $package,my $filename,my $line)=caller;
-
-    my $type   = shift @_;
-    my $argstr = shift @_;
+    my ($type, $argstr) = @_;
+    my ($package, $filename, $line)=caller;
     my $self = {};
 
-    $type = "" unless defined $type;
-    $argstr = "" unless defined $argstr;
+    $type //= "";
+    $argstr //= "";
 
     $logger->debug("Begin called from \$filename=$filename \$line=$line \$type=$type \$argstr=$argstr ref argstr=".ref $argstr);
 
@@ -244,14 +238,13 @@ sub open_form {
        $self->{dbh}->commit;
     }
     $self->{form_id} = $vars[0]->{form_open};
+    return;
 }
 
 # move to another module
 sub check_form {
     my ($self) = @_;
-    if (!$ENV{GATEWAY_INTERFACE}){
-        return 1;
-    }
+    return 1 unless ($ENV{GATEWAY_INTERFACE});
     my @vars = $self->call_procedure(funcname => 'form_check',
                               args => [$self->{session_id}, $self->{form_id}]
     );
@@ -260,9 +253,8 @@ sub check_form {
 
 sub close_form {
     my ($self) = @_;
-    if (!$ENV{GATEWAY_INTERFACE}){
-        return 1;
-    }
+    return 1 unless ($ENV{GATEWAY_INTERFACE});
+
     my @vars = $self->call_procedure(funcname => 'form_close',
                               args => [$self->{session_id}, $self->{form_id}]
     );
@@ -273,7 +265,7 @@ sub close_form {
 sub verify_session {
     my ($self) = @_;
 
-    if ($self->is_run_mode('cgi', 'mod_perl') and !$ENV{LSMB_NOHEAD}) {
+    if ($self->is_run_mode('cgi') || ($self->is_run_mode('mod_perl')) && !$ENV{LSMB_NOHEAD}) {
        if (!LedgerSMB::Session::check( $self->{cookie}, $self) ) {
             $logger->error("Session did not check");
             return 0;
@@ -286,30 +278,28 @@ sub verify_session {
 sub initialize_with_db {
     my ($self) = @_;
 
-    my $sth = $self->{dbh}->prepare("
-            SELECT value FROM defaults
-             WHERE setting_key = 'role_prefix'");
+    my $sth = $self->{dbh}->prepare(q(SELECT value FROM defaults WHERE setting_key = 'role_prefix'));
     $sth->execute;
 
 
     ($self->{_role_prefix}) = $sth->fetchrow_array;
 
-    $sth = $self->{dbh}->prepare('SELECT check_expiration()');
+    $sth = $self->{dbh}->prepare(q(SELECT check_expiration()));
     $sth->execute;
     ($self->{warn_expire}) = $sth->fetchrow_array;
 
     if ($self->{warn_expire}){
-        $sth = $self->{dbh}->prepare('SELECT user__check_my_expiration()');
+        $sth = $self->{dbh}->prepare(q(SELECT user__check_my_expiration()));
         $sth->execute;
         ($self->{pw_expires})  = $sth->fetchrow_array;
     }
 
 
-    my $query = "SELECT t.extends,
+    my $query = q(SELECT t.extends,
             coalesce (t.table_name, 'custom_' || extends)
             || ':' || f.field_name as field_def
         FROM custom_table_catalog t
-        JOIN custom_field_catalog f USING (table_id)";
+        JOIN custom_field_catalog f USING (table_id));
     $sth = $self->{dbh}->prepare($query);
     $sth->execute;
     my $ref;
@@ -329,6 +319,7 @@ sub initialize_with_db {
 
     $self->{stylesheet} =
         $self->{_user}->{stylesheet} unless $self->{stylesheet};
+    return;
 }
 
 
@@ -338,15 +329,17 @@ sub get_user_info {
         $self->{_user} =
         LedgerSMB::User->fetch_config($self);
     $self->{_user}->{language} ||= 'en';
+    return;
 }
 
 #This function needs to be moved into the session handler.
 sub _get_password {
-    my ($self) = shift @_;
-    $self->{sessionexpired} = shift @_;
+    my ($self) = shift;
+    $self->{sessionexpired} = shift;
 
-    my $q = new CGI::Simple;
+    my $q = CGI::Simple->new();
     print $q->redirect('login.pl?action=logout&reason=timeout');
+    return;
 }
 
 
@@ -358,21 +351,23 @@ sub _set_default_locale {
     $self->error( __FILE__ . ':' . __LINE__
                   . ": Locale ($lang) not loaded: $!\n" )
         unless $self->{_locale};
+    return;
 }
 
 sub _set_action {
     my ($self) = @_;
 
-    $self->{action} = "" unless defined $self->{action};
-    $self->{action} =~ s/\W/_/g;
+    $self->{action} //= "";
+    $self->{action} =~ s/\W/_/gx;
     $self->{action} = lc $self->{action};
+    return;
 }
 
 sub _set_script_name {
     my ($self) = @_;
 
-    if (exists $ENV{SCRIPT_NAME} && 
-        defined $ENV{SCRIPT_NAME} && 
+    if (exists $ENV{SCRIPT_NAME} &&
+        defined $ENV{SCRIPT_NAME} &&
         $ENV{SCRIPT_NAME} =~ m/([^\/\\]*.pl)\?*.*$/x) {
         $self->{script} = $1 if defined $1;
         $self->error("Access Denied") if ( ( $self->{script} =~ m#(\.\.|\\|/)#x ) );
@@ -382,6 +377,7 @@ sub _set_script_name {
 
     $logger->debug("\$self->{script} = $self->{script} "
                    . "\$self->{action} = $self->{action}");
+    return;
 }
 
 
@@ -389,7 +385,7 @@ sub _process_argstr {
     my ($self, $argstr) = @_;
 
     my %params=();
-    my $query = ($argstr) ? new CGI::Simple($argstr) : new CGI::Simple;
+    my $query = ($argstr) ? CGI::Simple->new($argstr) : CGI::Simple->new() ;
     # my $params = $query->Vars; returns a tied hash with keys that
     # are not parameters of the CGI query.
     %params = $query->Vars;
@@ -433,10 +429,10 @@ sub _process_cookies {
     }
 
     if ($self->is_run_mode('cgi', 'mod_perl') and $ENV{HTTP_COOKIE}) {
-        $ENV{HTTP_COOKIE} =~ s/;\s*/;/g;
-        my @cookies = split /;/, $ENV{HTTP_COOKIE};
+        $ENV{HTTP_COOKIE} =~ s/;\s*/;/gx;
+        my @cookies = split ';', $ENV{HTTP_COOKIE};
         foreach (@cookies) {
-            my ( $name, $value ) = split /=/, $_, 2;
+            my ( $name, $value ) = split '=', $_, 2;
             $cookie{$name} = $value;
         }
     }
@@ -446,34 +442,27 @@ sub _process_cookies {
 
     if (! $self->{company} && $self->{cookie}) {
         my $ccookie = $self->{cookie};
-        $ccookie =~ s/.*:([^:]*)$/$1/;
+        $ccookie =~ s/.*:([^:]*)$/$1/x;
         $self->{company} = $ccookie
             unless $ccookie eq 'Login';
     }
+    return;
 }
 
 sub is_run_mode {
-    my $self = shift @_;
-    #avoid 'uninitialized' warnings in tests
-    my $mode = shift @_;
-    my $rc   = 0;
-    if(! $mode){return $rc;}
+    my ($self, $mode) = @_;
+    return 0 unless ( $mode );
     $mode=lc $mode;
-    if ( $mode eq 'cgi' && $ENV{GATEWAY_INTERFACE} ) {
-        $rc = 1;
+    if ( ( $mode eq 'cgi' && $ENV{GATEWAY_INTERFACE} ) ||
+         ( $mode eq 'cli' && !( $ENV{GATEWAY_INTERFACE} || $ENV{MOD_PERL} ) ) ||
+         ( $mode eq 'mod_perl' && $ENV{MOD_PERL} )) {
+        return 1;
     }
-    elsif ( $mode eq 'cli' && !( $ENV{GATEWAY_INTERFACE} || $ENV{MOD_PERL} ) ) {
-        $rc = 1;
-    }
-    elsif ( $mode eq 'mod_perl' && $ENV{MOD_PERL} ) {
-        $rc = 1;
-    }
-    $rc;
+    return 0;
 }
 
 sub call_procedure {
-    my $self = shift;
-    my %args = @_;
+    my ($self, %args) = @_;
     $args{funcschema} ||= $LedgerSMB::Sysconfig::db_namespace;
     $args{funcname} ||= $args{procname};
     $args{dbh} = LedgerSMB::App_State::DBH();
@@ -493,7 +482,7 @@ sub is_allowed_role {
 sub finalize_request {
     LedgerSMB::App_State->cleanup();
     croak 'exit'; # return to error handling and cleanup
-                # Without dying, we tend to continue with a bad dbh. --CT
+                  # Without dying, we tend to continue with a bad dbh. --CT
 }
 
 sub error {
@@ -528,9 +517,8 @@ Content-Type: text/html; charset=utf-8
 # Database routines used throughout
 
 sub _db_init {
-    my $self     = shift @_;
-    my %args     = @_;
-    (my $package,my $filename,my $line)=caller;
+    my ($self, %args) =  @_;
+    my ($package, $filename, $line)=caller;
     if (!$self->{company}){
         $self->{company} = $LedgerSMB::Sysconfig::default_db;
     }
@@ -545,16 +533,17 @@ sub _db_init {
 
 #private, for db connection errors
 sub _on_connection_error {
-    for (@_){
+    for (@_) {
         $logger->error("$_");
     }
+    return;
 }
 
 sub dberror{
-   my $self = shift @_;
+   my $self = shift;
    my $state_error = {};
    my $locale = $LedgerSMB::App_State::Locale;
-   if(! $locale){$locale=$self->{_locale};}#tshvr4
+   if (! $locale) { $locale=$self->{_locale}; } #tshvr4
    my $dbh = $LedgerSMB::App_State::DBH;
    $state_error = {
             '42883' => $locale->text('Internal Database Error'),
@@ -571,18 +560,16 @@ sub dberror{
    $logger->error("Logging SQL State ".$dbh->state.", error ".
            $dbh->err . ", string " .$dbh->errstr);
    if (defined $state_error->{$dbh->state}){
-       croak $state_error->{$dbh->state}
-           . "\n" .
-          $locale->text('More information has been reported in the error logs');
        $dbh->rollback;
-       croak;
+       croak $state_error->{$dbh->state} . "\n" .
+          $locale->text('More information has been reported in the error logs');
    }
    croak $dbh->state . ":" . $dbh->errstr;
 }
 
 sub merge {
-    (my $package,my $filename,my $line)=caller;
-    my ( $self, $src ) = @_;
+    my ( $self, $src ) = (shift, shift);
+    my ($package, $filename, $line)=caller;
     $logger->debug("begin caller \$filename=$filename \$line=$line");
        # Removed dbh from logging string since not used on this api call and
        # not initialized in test cases -CT
@@ -625,11 +612,11 @@ sub merge {
         $self->{$dst_arg} = $src->{$arg};
     }
     $logger->debug("end caller \$filename=$filename \$line=$line");
+    return;
 }
 
 sub type {
-
-    my $self = shift @_;
+    my $self = shift;
 
     if (!$ENV{REQUEST_METHOD} or
         ( !grep {$ENV{REQUEST_METHOD} eq $_} ("HEAD", "GET", "POST") ) ) {
@@ -644,8 +631,7 @@ sub DESTROY {}
 
 sub set {
 
-    my $self = shift @_;
-    my %args = @_;
+    my ($self, %args) = @_;
 
     for my $arg (keys(%args)) {
         $self->{$arg} = $args{$arg};
@@ -657,17 +643,18 @@ sub set {
 sub remove_cgi_globals {
     my ($self) = @_;
     for my $key (keys %$self){
-        if ($key =~ /^\./){
+        if ($key =~ /^\./x){
             delete $self->{key}
         }
     }
+    return;
 }
 
 sub take_top_level {
    my ($self) = @_;
    my $return_hash = {};
    for my $key (keys %$self){
-       if (!ref($self->{$key}) && $key !~ /^\./){
+       if (!ref($self->{$key}) && $key !~ /^\./x){
           $return_hash->{$key} = $self->{$key}
        }
    }
