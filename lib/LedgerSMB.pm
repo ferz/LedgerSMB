@@ -370,18 +370,16 @@ sub _set_action {
 sub _set_script_name {
     my ($self) = @_;
 
-    $ENV{SCRIPT_NAME} = "" unless defined $ENV{SCRIPT_NAME};
-
-    $ENV{SCRIPT_NAME} =~ m/([^\/\\]*.pl)\?*.*$/;
-    $self->{script} = $1 unless !defined $1;
-    $self->{script} = "" unless defined $self->{script};
-
-    if ( ( $self->{script} =~ m#(\.\.|\\|/)# ) ) {
-        $self->error("Access Denied");
+    if (exists $ENV{SCRIPT_NAME} && defined $ENV{SCRIPT_NAME} && $ENV{SCRIPT_NAME} =~ m/([^\/\\]*.pl)\?*.*$/x) {
+	$self->{script} = $1 if defined $1;
+	if ( ( $self->{script} =~ m#(\.\.|\\|/)#x ) ) {
+	    $self->error("Access Denied");
+	}
+    } else {
+	$ENV{SCRIPT_NAME} = "";
+	$self->{script} = 'login.pl';
     }
-    if (!$self->{script}) {
-        $self->{script} = 'login.pl';
-    }
+
     $logger->debug("\$self->{script} = $self->{script} "
                    . "\$self->{action} = $self->{action}");
 }
