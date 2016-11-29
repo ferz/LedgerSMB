@@ -12,6 +12,9 @@ This module holds common workflow routines for reports.
 
 package LedgerSMB::Scripts::reports;
 
+use strict;
+use warnings;
+
 use LedgerSMB;
 use LedgerSMB::Template;
 use LedgerSMB::Business_Unit;
@@ -25,8 +28,10 @@ use LedgerSMB::Report::Listings::SIC;
 use LedgerSMB::Report::Listings::Overpayments;
 use LedgerSMB::Setting;
 use LedgerSMB::DBObject::Payment; # To move this off after rewriting payments
-use strict;
-use warnings;
+use Carp;
+
+use Log::Log4perl;
+my $logger = Log::Log4perl->get_logger('LedgerSMB::Scripts::reports');
 
 our $VERSION = '1.0';
 
@@ -73,11 +78,22 @@ sub start_report {
             }
         }
     }
-    @{$request->{entity_classes}} = map {
-            $request->fix_translation($_, 'class');
-                             } $request->call_procedure(
-                      funcname => 'entity__list_classes'
-    );
+
+    {
+        if ($request->can('fix_translation')) {
+            $request->{entity_classes} = [
+                map {
+                    $request->fix_translation($_, 'class');
+                } $request->call_procedure(
+                    funcname => 'entity__list_classes'
+                )];
+        } else {
+            $request->{entity_classes} = $request->call_procedure(
+                funcname => 'entity__list_classes'
+                );
+            $logger->debug("in start_report() \$request has class " . ref $request . "\n");
+        }
+    }
     @{$request->{heading_list}} =  $request->call_procedure(
                       funcname => 'account_heading_list');
     @{$request->{account_list}} =  $request->call_procedure(
@@ -187,8 +203,6 @@ Generates a balance sheet
 
 =cut
 
-use Log::Log4perl;
-my $logger = Log::Log4perl->get_logger('LedgerSMB::Scripts::reports');
 
 sub generate_balance_sheet {
     my ($request) = @_;
