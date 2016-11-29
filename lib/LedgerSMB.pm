@@ -111,6 +111,19 @@ This verifies the validity of the session cookie.
 
 This function sets up the db handle for the request
 
+=item fix_translation ($obj, $tag)
+
+Just a filter to translate $tag attribute in $obj.
+For example:
+
+@{$request->{entity_classes}} = map 
+  {
+    $request->fix_translation($_, 'class');
+  } 
+  $request->call_procedure(
+      funcname => 'entity__list_classes'
+  );
+
 =back
 
 
@@ -332,17 +345,6 @@ sub get_user_info {
     return;
 }
 
-#This function needs to be moved into the session handler.
-sub _get_password {
-    my ($self) = shift;
-    $self->{sessionexpired} = shift;
-
-    my $q = CGI::Simple->new();
-    print $q->redirect('login.pl?action=logout&reason=timeout');
-    return;
-}
-
-
 sub _set_default_locale {
     my ($self) = @_;
 
@@ -531,13 +533,6 @@ sub _db_init {
     return 1;
 }
 
-#private, for db connection errors
-sub _on_connection_error {
-    for (@_) {
-        $logger->error("$_");
-    }
-    return;
-}
 
 sub dberror{
    my $self = shift;
@@ -573,7 +568,7 @@ sub merge {
     $logger->debug("begin caller \$filename=$filename \$line=$line");
     my (@keys);
     @keys = @{$args{keys}} if (exists $args{keys} && defined $args{keys});
-    
+
     my $index = $args{index};
     unless ( scalar @keys ) {
         @keys = keys %{$src};
@@ -654,10 +649,6 @@ sub take_top_level {
    return $return_hash;
 }
 
-
-=item fix_translation ($obj, $tag)
-
-=cut
 
 sub fix_translation {
     my ($self, $obj, $tag) = @_;
