@@ -73,7 +73,7 @@ sub start_report {
             }
         }
     }
-    @{$request->{entity_classes}} = map { 
+    @{$request->{entity_classes}} = map {
             $request->fix_translation($_, 'class');
                              } $request->call_procedure(
                       funcname => 'entity__list_classes'
