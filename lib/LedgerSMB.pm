@@ -568,21 +568,14 @@ sub dberror{
 }
 
 sub merge {
-    my ( $self, $src ) = (shift, shift);
+    my ( $self, $src, %args ) = @_;
     my ($package, $filename, $line)=caller;
     $logger->debug("begin caller \$filename=$filename \$line=$line");
-       # Removed dbh from logging string since not used on this api call and
-       # not initialized in test cases -CT
-    for my $arg ( $self, $src ) {
-        shift;
-    }
-    my %args  = @_;
-    my @keys;
-    if (defined $args{keys}){
-         @keys  = @{ $args{keys} };
-    }
+    my (@keys);
+    @keys = @{$args{keys}} if (exists $args{keys} && defined $args{keys});
+    
     my $index = $args{index};
-    if ( !scalar @keys ) {
+    unless ( scalar @keys ) {
         @keys = keys %{$src};
     }
     for my $arg ( @keys ) {
