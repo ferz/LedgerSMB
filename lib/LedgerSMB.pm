@@ -377,7 +377,6 @@ sub _set_script_name {
         $self->{script} = $1 if defined $1;
         $self->error("Access Denied") if ( ( $self->{script} =~ m#(\.\.|\\|/)#x ) );
     } else {
-        $ENV{SCRIPT_NAME} = "";
         $self->{script} = 'login.pl';
     }
 
