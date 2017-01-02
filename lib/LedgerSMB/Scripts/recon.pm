@@ -116,13 +116,17 @@ sub submit_recon_set {
     my ($request) = shift;
     my $recon = LedgerSMB::DBObject::Reconciliation->new({base => $request});
     $recon->submit();
-    my $template = LedgerSMB::Template->new(
-            user => $request->{_user},
-            template => 'reconciliation/submitted',
-            locale => $request->{_locale},
-            format => 'HTML',
-            path=>"UI");
-    return $template->render_to_psgi($recon);
+    my $can_approve = $request->is_allowed_role({allowed_roles => ['reconciliation_approve']});
+    if ( !$can_approve ) {
+        my $template = LedgerSMB::Template->new(
+                user => $request->{_user},
+                template => 'reconciliation/submitted',
+                locale => $request->{_locale},
+                format => 'HTML',
+                path=>"UI");
+        return $template->render_to_psgi($recon);
+    }
+    return _display_report($recon, $request);
 }
 
 =item save_recon_set
@@ -254,7 +258,7 @@ sub _display_report {
         for my $amt_name (qw/ our_ their_ /) {
             for my $bal_type (qw/ balance credits debits/) {
                 $l->{"$amt_name$bal_type"} = $l->{"$amt_name$bal_type"}->to_output(money=>1);
-            }
+                }
         }
     }
 
@@ -267,6 +271,14 @@ sub _display_report {
     $recon->{out_of_balance} = $recon->{their_total} - $recon->{our_total};
     $recon->{submit_enabled} = ($recon->{their_total} == $recon->{our_total});
 
+    # Check if only one entry could explain the difference
+    if ( !$recon->{submit_enabled}) {
+        for my $l (@{$recon->{report_lines}}){
+            $l->{suspect} = $l->{their_credits} == abs($recon->{out_of_balance})
+                         || $l->{their_debits}  == abs($recon->{out_of_balance})
+                         ? 1 : 0;
+        }
+    }
     for my $amt_name (qw/ mismatch_our_ mismatch_their_ total_cleared_ total_uncleared_ /) {
       for my $bal_type (qw/ credits debits/) {
          $recon->{"$amt_name$bal_type"} = $recon->{"$amt_name$bal_type"}->to_output(money=>1);

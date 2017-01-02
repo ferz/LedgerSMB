@@ -29,7 +29,8 @@ requires 'PGObject', '1.403.2';
 requires 'PGObject::Simple', '2.0.0';
 requires 'PGObject::Simple::Role', '1.13.2';
 requires 'PGObject::Type::BigFloat';
-requires 'PGObject::Type::DateTime', '1.0.3';
+requires 'PGObject::Type::DateTime', '1.0.4';
+requires 'PGObject::Type::ByteString', '1.1.1';
 requires 'PGObject::Util::DBMethod';
 requires 'PGObject::Util::DBAdmin', '0.09';
 requires 'Plack::App::File';
@@ -41,13 +42,14 @@ requires 'Template', '2.14';
 requires 'Template::Parser';
 requires 'Template::Provider';
 requires 'Try::Tiny';
+requires "XML::Simple";
 requires 'namespace::autoclean';
 
 recommends 'Math::BigInt::GMP';
 
 feature 'rest', "RESTful Web Service XML support" =>
     sub {
-        requires "XML::Simple";
+        # no dependencies which aren't already required above
 };
 
 feature 'starman', "Standalone Server w/Starman" =>
@@ -80,6 +82,12 @@ feature 'openoffice', "OpenOffice.org output" =>
         requires "XML::Twig";
         requires "OpenOffice::OODoc";
         requires 'OpenOffice::OODoc::Styles';
+};
+
+feature 'xls', "Microsoft Excel" =>
+    sub {
+        requires 'Spreadsheet::WriteExcel';
+        requires 'Excel::Writer::XLSX';
 };
 
 # Even with cpanm --notest, 'test' target of --installdeps

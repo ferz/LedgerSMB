@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 205;
+use Test::More tests => 208;
 use File::Find;
 
 my @on_disk;
@@ -93,6 +93,7 @@ my @modules =
           'LedgerSMB::old_code', 'LedgerSMB::Part',
           'LedgerSMB::Payroll::Deduction_Type',
           'LedgerSMB::Payroll::Income_Type',
+          'LedgerSMB::PSGI::Preloads',
           'LedgerSMB::REST_Format::json',
           'LedgerSMB::Reconciliation::CSV',
           'LedgerSMB::Reconciliation::ISO20022',
@@ -171,6 +172,7 @@ my @modules =
           'LedgerSMB::Template::Elements', 'LedgerSMB::Template::DBProvider',
           'LedgerSMB::Template::TTI18N', 'LedgerSMB::Template::TXT',
           'LedgerSMB::Template::HTML', 'LedgerSMB::Template::CSV',
+          'LedgerSMB::Template::XLS', 'LedgerSMB::Template::XLSX',
           'LedgerSMB::Template::DB', 'LedgerSMB::Timecard::Type',
           'LedgerSMB::REST_Class::contact', 'LedgerSMB::Request::Error',
           'LedgerSMB::Database::Loadorder', 'LedgerSMB::Database::Change',

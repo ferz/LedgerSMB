@@ -21,11 +21,13 @@ DEB_perlmodules += libmath-bigint-gmp-perl libmoose-perl libnumber-format-perl
 DEB_perlmodules += libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl
 DEB_perlmodules += libpgobject-util-dbmethod-perl libplack-perl libtemplate-perl
 DEB_perlmodules += libnamespace-autoclean-perl libmoosex-nonmoose-perl
+DEB_perlmodules += libxml-simple-perl
 DEB_feature_PDF := libtemplate-plugin-latex-perl libtex-encode-perl
 DEB_feature_PDF := texlive-latex-recommended
 DEB_feature_PDF_utf8 := texlive-xetex
 DEB_feature_OpenOffice := libopenoffice-oodoc-perl
 DEB_feature_PGTAP := pgtap
+DEB_feature_XLS :=
 
 # Core packages provided by Fedora 24
 RHEL_essential := perl-devel perl-CPAN perl-App-cpanminus
@@ -38,14 +40,17 @@ RHEL_perlmodules += perl-Locale-Maketext perl-Locale-Maketext-Lexicon
 RHEL_perlmodules += perl-Log-Log4perl perl-MIME-Base64 perl-MIME-Lite perl-Math-BigInt-GMP
 RHEL_perlmodules += perl-Moose perl-Number-Format perl-Plack perl-Template-Toolkit
 RHEL_perlmodules += perl-namespace-autoclean perl-MooseX-NonMoose
+RHEL_perlmodules += perl-XML-Simple
 RHEL_feature_PDF := perl-TeX-Encode texlive
 RHEL_feature_PDF_utf8 := 
 RHEL_feature_OpenOffice := 
+RHEL_feature_XLS := 
 
 FBSD_essential := 
 FBSD_perlmodules := 
 FBSD_feature_PDF := 
 FBSD_feature_OpenOffice := 
+FBSD_feature_XLS := 
 
 APT_GET = sudo apt-get install
 YUM = sudo yum install
@@ -153,17 +158,20 @@ ifeq ($(OSTYPE),DEBIAN)
 OS_feature_PDF        := deb_feature_PDF
 OS_feature_PDF_utf8   := deb_feature_PDF_utf8
 OS_feature_OpenOffice := deb_feature_OpenOffice
+OS_feature_XLS        := deb_feature_XLS
 OS_feature_PGTAP      := deb_feature_PGTAP
 endif
 ifeq ($(OSTYPE),REDHAT)
 OS_feature_PDF        := rhel_feature_PDF
 OS_feature_PDF_utf8   := rhel_feature_PDF_utf8
 OS_feature_OpenOffice := rhel_feature_OpenOffice
+OS_feature_XLS        := rhel_feature_XLS
 endif
 ifeq ($(OSTYPE),FREEBSD)
 OS_feature_PDF        := fbsd_feature_PDF
 OS_feature_PDF_utf8   := fbsd_feature_PDF_utf8
 OS_feature_OpenOffice := fbsd_feature_OpenOffice
+OS_feature_XLS        := fbsd_feature_XLS
 endif
 
 # make help
@@ -176,7 +184,7 @@ Help on installing LedgerSMB can be found in
   - http://ledgersmb.org/topic/installing-ledgersmb-15
 
 The easiest way to use this makefile to install LedgerSMB is simply to run
-  make all_depndencies
+  make all_dependencies
   make feature_PDF_utf8 # this is optional and is a large additional download
                         # see discussion about XeLaTeX and UTF8 at
                         # http://ledgersmb.org
@@ -210,6 +218,7 @@ Help on using this Makefile
 
     - feature_PDF             : Install system and cpan packages for generating PDF/Postscript output
     - feature_PDF_utf8        : Install system and cpan packages for UTF8 ouput in PDF/Postscript output
+    - feature_XLS             : Install system and cpan packages for generating XLS output
     - feature_OpenOffice      : Install system and cpan packages for generating OpenOffice output
 
     #############################################################
@@ -225,12 +234,14 @@ Help on using this Makefile
     - deb_feature_PDF         : installs deb packages for generating PDF/Postscript output
     - deb_feature_PDF_utf8    : Installs texlive-xetex to allow UTF8 ouput in PDF/Postscript output
     - deb_feature_OpenOffice  : Installs deb package for generating OpenOffice output
+    - deb_feature_XLS         : Installs deb package for generating XLS output
 
     - rhel_essential          : installs just the "can't do without these" dependencies
     - rhel_perlmodules        : installs all known rpm packaged perl modules we depend on
     - rhel_feature_PDF        : installs rpm packages for generating PDF/Postscript output
     - rhel_feature_PDF_utf8   : Installs texlive-xetex (if available) to allow UTF8 ouput in PDF/Postscript output
     - rhel_feature_OpenOffice : Installs rpm package for generating OpenOffice output
+    - rhel_feature_XLS        : Installs deb package for generating XLS output
 
 
 endef
@@ -337,7 +348,7 @@ endif
 debian: deb_essential deb_perlmodules
 #   make debian_all
 #       installs all apt dependencies for a debian system Including all features except deb_feature_PDF_utf8
-all_debian: debian deb_feature_PDF deb_feature_OpenOffice
+all_debian: debian deb_feature_PDF deb_feature_OpenOffice deb_feature_XLS
 #   make deb_essential
 #       installs just the "can't do without these" dependencies
 deb_essential:
@@ -355,6 +366,10 @@ deb_feature_PDF:
 deb_feature_PDF_utf8: deb_feature_PDF
 	$(APT_GET) $(DEB_feature_PDF_utf8)
 #   make deb_feature_OpenOffice
+#       Installs deb package for generating XLS output
+deb_feature_XLS:
+	$(APT_GET) $(DEB_feature_XLS)
+#   make deb_feature_XLS
 #       Installs deb package for generating OpenOffice output
 deb_feature_OpenOffice:
 	$(APT_GET) $(DEB_feature_OpenOffice)
@@ -387,6 +402,10 @@ rhel_feature_PDF:
 #       Installs texlive-xetex to allow UTF8 ouput in PDF/Postscript output
 rhel_feature_PDF_utf8: rhel_feature_PDF
 #	$(YUM) $(RHEL_feature_PDF_utf8)
+#   make rhel_feature_XLS
+#       Installs rpm package for generating XLS output
+rhel_feature_XLS:
+#	$(YUM) $(RHEL_feature_XLS)
 #   make rhel_feature_OpenOffice
 #       Installs rpm package for generating OpenOffice output
 rhel_feature_OpenOffice:
@@ -403,6 +422,7 @@ all_freebsd: freebsd
 fbsd_feature_PDF:
 fbsd_feature_PDF_utf8:
 fbsd_feature_OpenOffice:
+fbsd_feature_XLS:
 
 
 #   make cpan
@@ -424,6 +444,11 @@ feature_PDF_utf8: $(OS_feature_PDF_utf8) feature_PDF
 #       Install system and cpan packages for generating OpenOffice output
 feature_OpenOffice: $(OS_feature_OpenOffice)
 	cpanm --quiet --notest --with-feature=openoffice --installdeps .
+
+#   make feature_XLS
+#       Install system and cpan packages for generating XLS output
+feature_XLS: $(OS_feature_XLS)
+	cpanm --quiet --notest --with-feature=XLS --installdeps .
 
 
 postgres_user:
@@ -465,5 +490,6 @@ devtest:
 # - create an invoice
 # - Run a test that verifies Dojo has loaded and is able to modify the DOM
 # - generate PDF of invoice
+# - generate XLS Doc of invoice
 # - generate OpenOffice Doc of invoice
 # - Use Mountebank to send an email of the invoice
